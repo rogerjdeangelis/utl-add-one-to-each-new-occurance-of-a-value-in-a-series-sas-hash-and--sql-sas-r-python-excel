@@ -1,2 +1,317 @@
 # utl-add-one-to-each-new-occurance-of-a-value-in-a-series-sas-hash-and--sql-sas-r-python-excel
 Add one to each new occurance of a value using sqlite in a series of numbers and maintain the order of the numbers
+    %let pgm=utl-add-one-to-each-new-occurance-of-a-value-in-a-series-sas-hash-and--sql-sas-r-python-excel;
+
+    %stop_submission;
+
+    Add one to each new occurance of a value using sqlite in a series of numbers and maintain the order of the numbers
+
+       CONTENTS
+
+         1 sas hash
+         2 sas sql
+         3 r sql
+           for python and excel see https://tinyurl.com/4e6yaap8  (same sql code)
+
+    github
+    https://tinyurl.com/bddacsss
+    https://github.com/rogerjdeangelis/utl-add-one-to-each-new-occurance-of-a-value-in-a-series-sas-hash-and--sql-sas-r-python-excel
+
+    stackoverflow
+    https://tinyurl.com/39sbc6mx
+    https://stackoverflow.com/questions/79585017/how-to-count-the-number-of-times-a-value-has-appeared-so-far-in-a-python-pandas
+
+    /**************************************************************************************************************************/
+    /*           INPUT                  |         PROCESS                                   |           OUTPUT                */
+    /*           =====                  |    LETS EXAMINE VALUE=1                           |           ======                */
+    /*                                  |                                                   |                                 */
+    /*                                  |                 OUTPUT                            |                                 */
+    /*     DATE       VALUE             |    DATE   VALUE COUNT                             |    DATE       VALUE    COUNT    */
+    /*                                  |                                                   |                                 */
+    /*  2017-12-07      11              | 2017-12-07    11  1   1 1st 11                    | 2017-12-07      1        1      */
+    /*  2017-12-07      11              | 2017-12-07    11  2   1 2st 11                    | 2017-12-07      1        2      */
+    /*  2017-12-08      12              | 2017-12-08    12  1                               | 2017-12-08      2        1      */
+    /*  2018-01-06      11              | 2018-01-06    11  3  +1 3nd 11                    | 2018-01-06      1        3      */
+    /*  2018-01-07      13              | 2018-01-07    13  1                               | 2018-01-07      3        1      */
+    /*  2018-01-08      12              | 2018-01-08    12  2                               | 2018-01-08      2        2      */
+    /*  2019-01-06      11              | 2019-01-06    11  4  +1 4th 11                    | 2019-01-06      1        4      */
+    /*  2019-01-07      11              | 2019-01-07    11  5  +1 5th 11                    | 2019-01-07      1        5      */
+    /*  2019-01-08      13              | 2019-01-08    13  2                               | 2019-01-08      3        2      */
+    /*                                  |                                                   |                                 */
+    /*                                  |-------------------------------------------------------------------------------------*/
+    /* data sd1.have;                   |                                                   |                                 */
+    /* input date $10. value;           |  1 SAS HASH                                       |    DATE       VALUE    COUNT    */
+    /* cards4;                          |  ==========                                       |                                 */
+    /* 2017-12-07 11                    |                                                   | 2017-12-07      1        1      */
+    /* 2017-12-07 11                    |  data want;                                       | 2017-12-07      1        2      */
+    /* 2017-12-08 12                    |    if _N_ = 1 then do;                            | 2017-12-08      2        1      */
+    /* 2018-01-06 11                    |      declare hash h();                            | 2018-01-06      1        3      */
+    /* 2018-01-07 13                    |      h.definekey('value');                        | 2018-01-07      3        1      */
+    /* 2018-01-08 12                    |      h.definedata('count');                       | 2018-01-08      2        2      */
+    /* 2019-01-06 11                    |      h.definedone();                              | 2019-01-06      1        4      */
+    /* 2019-01-07 11                    |    end;                                           | 2019-01-07      1        5      */
+    /* 2019-01-08 13                    |                                                   | 2019-01-08      3        2      */
+    /* ;;;;                             |    set sd1.have;                                  |                                 */
+    /* run;quit;                        |    if h.find() ne 0 then count = 1;               |                                 */
+    /*                                  |    else count + 1;                                |                                 */
+    /*                                  |    h.replace();                                   |                                 */
+    /*                                  |  run;quit;                                        |                                 */
+    /*                                  |                                                   |                                 */
+    /*                                  |-------------------------------------------------------------------------------------*/
+    /*                                  |                                                   |                                 */
+    /*                                  | 2 SAS SQL                                         |    DATE       VALUE    COUNT    */
+    /*                                  | =========                                         |                                 */
+    /*                                  |                                                   | 2017-12-07      1        1      */
+    /*                                  | *---- we need to create row numbers    ----;      | 2017-12-07      1        2      */
+    /*                                  | proc sql;                                         | 2017-12-08      2        1      */
+    /*                                  |   *---- does not work with a view      ----;      | 2018-01-06      1        3      */
+    /*                                  |   *---- does not work nested monotonic ----;      | 2018-01-07      3        1      */
+    /*                                  |   create                                          | 2018-01-08      2        2      */
+    /*                                  |      table havrow as                              | 2019-01-06      1        4      */
+    /*                                  |   select                                          | 2019-01-07      1        5      */
+    /*                                  |      monotonic() as rowid                         | 2019-01-08      3        2      */
+    /*                                  |     ,date                                         |                                 */
+    /*                                  |     ,value                                        |                                 */
+    /*                                  |   from                                            |                                 */
+    /*                                  |      sd1.have                                     |                                 */
+    /*                                  |   ;                                               |                                 */
+    /*                                  |   create                                          |                                 */
+    /*                                  |     table want as                                 |                                 */
+    /*                                  |   select                                          |                                 */
+    /*                                  |     a.date                                        |                                 */
+    /*                                  |    ,a.value                                       |                                 */
+    /*                                  |    ,(select                                       |                                 */
+    /*                                  |        count(*)                                   |                                 */
+    /*                                  |      from                                         |                                 */
+    /*                                  |       havrow b                                    |                                 */
+    /*                                  |      where                                        |                                 */
+    /*                                  |        b.value =  a.value and                     |                                 */
+    /*                                  |        b.rowid <= a.rowid) as count               |                                 */
+    /*                                  |   from                                            |                                 */
+    /*                                  |       havrow a                                    |                                 */
+    /*                                  |   order                                           |                                 */
+    /*                                  |        by a.rowid                                 |                                 */
+    /*                                  | ;quit;                                            |                                 */
+    /*                                  |                                                   |                                 */
+    /*                                  |-------------------------------------------------------------------------------------*/
+    /*                                  |                                                   |                                 */
+    /*                                  | 4 R SQL (SQLITE PROVIDES FOR ROW NUMBER)          | > want                          */
+    /*                                  | ========================================          |         DATE VALUE count        */
+    /*                                  |                                                   | 1 2017-12-07    11     1        */
+    /*                                  | %utl_rbeginx;                                     | 2 2017-12-07    11     2        */
+    /*                                  | parmcards4;                                       | 3 2017-12-08    12     1        */
+    /*                                  | library(haven)                                    | 4 2018-01-06    11     3        */
+    /*                                  | library(sqldf)                                    | 5 2018-01-07    13     1        */
+    /*                                  | source("c:/oto/fn_tosas9x.r")                     | 6 2018-01-08    12     2        */
+    /*                                  | have<-read_sas("d:/sd1/have.sas7bdat")            | 7 2019-01-06    11     4        */
+    /*                                  | print(have)                                       | 8 2019-01-07    11     5        */
+    /*                                  | want<-sqldf("                                     | 9 2019-01-08    13     2        */
+    /*                                  |   select                                          |                                 */
+    /*                                  |   date,                                           | SAS                             */
+    /*                                  |   value,                                          |    DATE       VALUE    COUNT    */
+    /*                                  |   row_number()                                    |                                 */
+    /*                                  |     over (partition by value order by date)       | 2017-12-07      11       1      */
+    /*                                  |     as count                                      | 2017-12-07      11       2      */
+    /*                                  | from                                              | 2017-12-08      12       1      */
+    /*                                  |   have                                            | 2018-01-06      11       3      */
+    /*                                  | order by                                          | 2018-01-07      13       1      */
+    /*                                  |   date                                            | 2018-01-08      12       2      */
+    /*                                  |   ")                                              | 2019-01-06      11       4      */
+    /*                                  | want                                              | 2019-01-07      11       5      */
+    /*                                  | fn_tosas9x(                                       | 2019-01-08      13       2      */
+    /*                                  |       inp    = want                               |                                 */
+    /*                                  |      ,outlib ="d:/sd1/"                           |                                 */
+    /*                                  |      ,outdsn ="want"                              |                                 */
+    /*                                  |      )                                            |                                 */
+    /*                                  | ;;;;                                              |                                 */
+    /*                                  | %utl_rendx;                                       |                                 */
+    /**************************************************************************************************************************/
+
+    /*                   _
+    (_)_ __  _ __  _   _| |_
+    | | `_ \| `_ \| | | | __|
+    | | | | | |_) | |_| | |_
+    |_|_| |_| .__/ \__,_|\__|
+            |_|
+    */
+
+    data sd1.have;
+    input date $10. value;
+    cards4;
+    2017-12-07 11
+    2017-12-07 11
+    2017-12-08 12
+    2018-01-06 11
+    2018-01-07 11
+    2018-01-08 12
+    2019-01-06 11
+    2019-01-07 11
+    2019-01-08 13
+    ;;;;
+    run;quit;
+
+
+    /**************************************************************************************************************************/
+    /*      DATE       VALUE                                                                                                  */
+    /*                                                                                                                        */
+    /*   2017-12-07      11                                                                                                   */
+    /*   2017-12-07      11                                                                                                   */
+    /*   2017-12-08      12                                                                                                   */
+    /*   2018-01-06      11                                                                                                   */
+    /*   2018-01-07      13                                                                                                   */
+    /*   2018-01-08      12                                                                                                   */
+    /*   2019-01-06      11                                                                                                   */
+    /*   2019-01-07      11                                                                                                   */
+    /*   2019-01-08      13                                                                                                   */
+    /**************************************************************************************************************************/
+
+    /*                   _               _
+    / |  ___  __ _ ___  | |__   __ _ ___| |__
+    | | / __|/ _` / __| | `_ \ / _` / __| `_ \
+    | | \__ \ (_| \__ \ | | | | (_| \__ \ | | |
+    |_| |___/\__,_|___/ |_| |_|\__,_|___/_| |_|
+
+    */
+
+    data want;
+      if _N_ = 1 then do;
+        declare hash h();
+        h.definekey('value');
+        h.definedata('count');
+        h.definedone();
+      end;
+
+      set sd1.have;
+      if h.find() ne 0 then count = 1;
+      else count + 1;
+      h.replace();
+    run;quit;
+
+    /**************************************************************************************************************************/
+    /* Obs       DATE       VALUE    COUNT                                                                                    */
+    /*                                                                                                                        */
+    /*  1     2017-12-07      11       1                                                                                      */
+    /*  2     2017-12-07      11       2                                                                                      */
+    /*  3     2017-12-08      12       1                                                                                      */
+    /*  4     2018-01-06      11       3                                                                                      */
+    /*  5     2018-01-07      13       1                                                                                      */
+    /*  6     2018-01-08      12       2                                                                                      */
+    /*  7     2019-01-06      11       4                                                                                      */
+    /*  8     2019-01-07      11       5                                                                                      */
+    /*  9     2019-01-08      13       2                                                                                      */
+    /**************************************************************************************************************************/
+
+    /*___                              _
+    |___ \   ___  __ _ ___   ___  __ _| |
+      __) | / __|/ _` / __| / __|/ _` | |
+     / __/  \__ \ (_| \__ \ \__ \ (_| | |
+    |_____| |___/\__,_|___/ |___/\__, |_|
+                                    |_|
+    */
+
+    *---- we need to create row numbers    ----;
+    proc sql;
+      *---- does not work with a view      ----;
+      *---- does not work nested monotonic ----;
+      create
+         table havrow as
+      select
+         monotonic() as rowid
+        ,date
+        ,value
+      from
+         sd1.have
+      ;
+      create
+        table want as
+      select
+        a.date
+       ,a.value
+       ,(select
+           count(*)
+         from
+          havrow b
+         where
+           b.value =  a.value and
+           b.rowid <= a.rowid) as count
+      from
+          havrow a
+      order
+           by a.rowid
+    ;quit;
+
+    /**************************************************************************************************************************/
+    /*  Obs       DATE       VALUE    COUNT                                                                                   */
+    /*                                                                                                                        */
+    /*   1     2017-12-07      11       1                                                                                     */
+    /*   2     2017-12-07      11       2                                                                                     */
+    /*   3     2017-12-08      12       1                                                                                     */
+    /*   4     2018-01-06      11       3                                                                                     */
+    /*   5     2018-01-07      13       1                                                                                     */
+    /*   6     2018-01-08      12       2                                                                                     */
+    /*   7     2019-01-06      11       4                                                                                     */
+    /*   8     2019-01-07      11       5                                                                                     */
+    /*   9     2019-01-08      13       2                                                                                     */
+    /**************************************************************************************************************************/
+
+    /*____                    _
+    |___ /   _ __   ___  __ _| |
+      |_ \  | `__| / __|/ _` | |
+     ___) | | |    \__ \ (_| | |
+    |____/  |_|    |___/\__, |_|
+                           |_|
+    */
+
+    %utl_rbeginx;
+    parmcards4;
+    library(haven)
+    library(sqldf)
+    source("c:/oto/fn_tosas9x.r")
+    have<-read_sas("d:/sd1/have.sas7bdat")
+    print(have)
+    want<-sqldf("
+      select
+      date,
+      value,
+      row_number()
+        over (partition by value order by date)
+        as count
+    from
+      have
+    order by
+      date
+      ")
+    want
+    fn_tosas9x(
+          inp    = want
+         ,outlib ="d:/sd1/"
+         ,outdsn ="want"
+         )
+    ;;;;
+    %utl_rendx;
+
+    proc print data=sd1.want;
+    run;quit;
+
+    /**************************************************************************************************************************/
+    /* R                        | SAS                                                                                         */
+    /*         DATE VALUE count |  ROWNAMES       DATE       VALUE    COUNT                                                   */
+    /*                          |                                                                                             */
+    /* 1 2017-12-07    11     1 |      1       2017-12-07      11       1                                                     */
+    /* 2 2017-12-07    11     2 |      2       2017-12-07      11       2                                                     */
+    /* 3 2017-12-08    12     1 |      3       2017-12-08      12       1                                                     */
+    /* 4 2018-01-06    11     3 |      4       2018-01-06      11       3                                                     */
+    /* 5 2018-01-07    13     1 |      5       2018-01-07      13       1                                                     */
+    /* 6 2018-01-08    12     2 |      6       2018-01-08      12       2                                                     */
+    /* 7 2019-01-06    11     4 |      7       2019-01-06      11       4                                                     */
+    /* 8 2019-01-07    11     5 |      8       2019-01-07      11       5                                                     */
+    /* 9 2019-01-08    13     2 |      9       2019-01-08      13       2                                                     */
+    /**************************************************************************************************************************/
+
+    /*              _
+      ___ _ __   __| |
+     / _ \ `_ \ / _` |
+    |  __/ | | | (_| |
+     \___|_| |_|\__,_|
+
+    */
